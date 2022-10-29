@@ -1,0 +1,2 @@
+module ApiExceptions
+end
