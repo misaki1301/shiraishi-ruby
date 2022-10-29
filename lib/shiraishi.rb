@@ -2,15 +2,24 @@
 require "faraday"
 require "oj"
 require_relative "shiraishi/version"
+require "http_status_code"
+require "api_exceptions"
 
 module Shiraishi
   module V1
     class Client
-      include HttpStatusCode
+      include HttpStatusCodes
       include ApiExceptions
 
       API_ENDPOINT = "https://api.matsurihi.me/mltd/v1/".freeze
       API_REQUEST_QUOTA_REACHED_MESSAGE = "API rate limit exceeded".freeze
+
+      def idol_cards
+        request(
+          http_method: :get,
+          endpoint: "cards"
+        )
+      end
 
       private
 
@@ -25,7 +34,7 @@ module Shiraishi
         response = client.public_send(http_method, endpoint, params)
         parsed_response = Oj.load(response.body)
 
-        return parsed_response if response.succesfull?
+        return parsed_response if response_successful?
 
         raise error_class, "Code #{response.status}, response: #{response.body}"
       end
@@ -38,6 +47,7 @@ module Shiraishi
           UnauthorizedError
         when HTTP_FORBIDDEN_CODE
           return ApiRequestQuotaReachedError if api_requests_quota_reached?
+
           ForbiddenError
         when HTTP_NOT_FOUND_CODE
           NotFoundError
@@ -48,7 +58,7 @@ module Shiraishi
         end
       end
 
-      def response.successful?
+      def response_successful?
         response.status == HTTP_OK_CODE
       end
 
